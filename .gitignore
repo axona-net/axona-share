@@ -1,0 +1,6 @@
+node_modules/
+# Symlink into node_modules that satisfies the import map's bare specifiers.
+# Recreated by `npm run link-kernel`; never committed.
+/axona-protocol
+*.log
+.DS_Store
