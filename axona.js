@@ -10,12 +10,29 @@ import { resolveAnchor } from './region.js';
 
 export { KERNEL_VERSION };          // surfaced in the app header (kernel-version visibility)
 
-const BRIDGE_URL = new URLSearchParams(location.search).get('bridge')
-  || (location.hostname.includes('testnet') ? 'wss://testnet.axona.net' : 'wss://bridge.axona.net');
+// ── Bridge selection — same build runs against prod or testnet ───────────────
+// Priority: explicit ?bridge=<wss url>  →  ?net=testnet|prod shortcut  →  default
+// by hostname (a *testnet* host defaults to testnet, otherwise prod). This is
+// what lets the GitHub Pages build point at the testnet network with a URL
+// extension, e.g.  …/axona-share/?net=testnet  or  ?bridge=wss://testnet.axona.net
+const KNOWN_BRIDGES = { prod: 'wss://bridge.axona.net', testnet: 'wss://testnet.axona.net' };
+const _params = new URLSearchParams(location.search);
+function resolveBridge() {
+  const explicit = (_params.get('bridge') || '').trim();
+  if (/^wss?:\/\//.test(explicit)) return explicit;
+  const net = (_params.get('net') || '').trim().toLowerCase();
+  if (KNOWN_BRIDGES[net]) return KNOWN_BRIDGES[net];
+  return location.hostname.includes('testnet') ? KNOWN_BRIDGES.testnet : KNOWN_BRIDGES.prod;
+}
+const BRIDGE_URL = resolveBridge();
 const ANCHOR    = resolveAnchor();                       // { token, name, center:{lat,lng}, publisher }
 const PUBLISHER = ANCHOR.publisher;
 
 export const REGION = { token: ANCHOR.token, name: ANCHOR.name, code: ANCHOR.code };   // for the UI
+// Which network this session is on (for the header) + the raw bridge URL.
+export const BRIDGE  = BRIDGE_URL;
+export const NETWORK = BRIDGE_URL === KNOWN_BRIDGES.testnet ? 'testnet'
+                     : BRIDGE_URL === KNOWN_BRIDGES.prod    ? 'prod' : 'custom';
 
 export async function connectAxona(onStatus = () => {}) {
   onStatus(`connecting ${BRIDGE_URL} · region ${ANCHOR.name}…`);

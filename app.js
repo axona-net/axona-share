@@ -3,11 +3,11 @@
 // of chunk-messages (@axona/protocol/std/chunk) and reassembled on every
 // subscriber. Chunk size is the kernel's reliable-publish floor (15 KB) so every
 // chunk fits in a single pub/sub message that all peers/browsers can receive.
-import { connectAxona, KERNEL_VERSION, REGION } from './axona.js';
+import { connectAxona, KERNEL_VERSION, REGION, NETWORK, BRIDGE } from './axona.js';
 import { chunkBytes, createReassembler } from '@axona/protocol/std/chunk';
 import { compressImage } from './image.js';
 
-const APP_VERSION = '0.9.0';
+const APP_VERSION = '0.10.0';
 const DEFAULT_CHANNEL = { id: 'axona-share/public-images', name: 'Public Images' };
 const MAX_IMAGE_BYTES = 1_000_000;
 const $ = (id) => document.getElementById(id);
@@ -179,7 +179,7 @@ const closeSidebarMobile = () => { if (window.matchMedia('(max-width:760px)').ma
 
 // ── wiring ──────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
-  $('ver').textContent = `app v${APP_VERSION} · std/chunk · kernel v${KERNEL_VERSION} · region ${REGION.name}`;
+  $('ver').textContent = `app v${APP_VERSION} · kernel v${KERNEL_VERSION} · ${NETWORK} (${BRIDGE.replace('wss://','')}) · region ${REGION.name}`;
 
   // Joined via a scanned QR / shared link (?join=<id>&name=<name>): add the
   // channel and make it active. If the app was already open in another tab on

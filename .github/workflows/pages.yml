@@ -1,0 +1,56 @@
+name: Deploy to GitHub Pages
+
+# Builds the static site and publishes it to GitHub Pages. The kernel
+# (@axona/protocol, github-pinned in package.json) is installed via npm and
+# copied to ./axona-protocol so the import map in index.html resolves — keeping
+# the repo itself free of a vendored kernel copy.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; let an in-progress run finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # The lockfile pins the kernel by git tag; the URL may be ssh — rewrite to
+      # https so `npm ci` can clone the public repo without SSH credentials.
+      - name: Use https for github git deps
+        run: |
+          git config --global url."https://github.com/".insteadOf "git+ssh://git@github.com/"
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+      - run: npm ci --omit=dev
+      - name: Assemble site
+        run: |
+          mkdir -p _site/axona-protocol
+          cp index.html app.js axona.js region.js image.js axona-ant.png _site/
+          cp -RL node_modules/@axona/protocol/src node_modules/@axona/protocol/std _site/axona-protocol/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment

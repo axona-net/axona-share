@@ -8,6 +8,26 @@ chunks with `@axona/protocol/std/chunk`, published over Axona, and reassembled
 on every subscriber. No server holds the images — they travel peer-to-peer
 across the mesh, relayed/bootstrapped through a bridge.
 
+## Live (GitHub Pages)
+
+<https://axona-net.github.io/axona-share/> — the published build, on the
+**production** network by default.
+
+## Networks — one build, prod or testnet
+
+The same build picks its bridge from the URL, so you can point the live Pages
+app at either network:
+
+| URL | network |
+|-----|---------|
+| `…/axona-share/` | **prod** (`wss://bridge.axona.net`) — default |
+| `…/axona-share/?net=testnet` | **testnet** (`wss://testnet.axona.net`) |
+| `…/axona-share/?bridge=wss://my.bridge` | any explicit bridge |
+
+The active network is shown in the header version row. Order of precedence:
+explicit `?bridge=` → `?net=testnet\|prod` shortcut → default by hostname (a
+`*testnet*` host defaults to testnet, otherwise prod).
+
 ## Run it
 
 ```sh
