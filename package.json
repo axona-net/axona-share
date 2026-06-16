@@ -9,6 +9,6 @@
     "link-kernel": "npm install && ln -sfn node_modules/@axona/protocol axona-protocol"
   },
   "dependencies": {
-    "@axona/protocol": "github:axona-net/axona-protocol#semver:^2.48.0"
+    "@axona/protocol": "github:axona-net/axona-protocol#semver:^2.49.0"
   }
 }
