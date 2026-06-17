@@ -7,7 +7,7 @@ import { connectAxona, KERNEL_VERSION, REGION, NETWORK, BRIDGE } from './axona.j
 import { chunkBytes, createReassembler } from '@axona/protocol/std/chunk';
 import { compressImage } from './image.js';
 
-const APP_VERSION = '0.10.1';
+const APP_VERSION = '0.11.0';
 const DEFAULT_CHANNEL = { id: 'axona-share/public-images', name: 'Public Images' };
 const MAX_IMAGE_BYTES = 1_000_000;
 const $ = (id) => document.getElementById(id);

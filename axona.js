@@ -4,7 +4,7 @@
 // self-contained keyspace — local nodes root local channels and the bridge is
 // only the rendezvous. (Was: both hardcoded us-east, which pinned every peer +
 // topic to one region and locked out anyone elsewhere.)
-import { AxonaPeer, AxonaDomain, NeuronNode, deriveIdentity, KERNEL_VERSION } from '@axona/protocol';
+import { AxonaPeer, AxonaDomain, NeuronNode, deriveIdentity, dumpIdentity, loadIdentity, KERNEL_VERSION } from '@axona/protocol';
 import { webTransport } from '@axona/web';
 import { resolveAnchor } from './region.js';
 
@@ -34,14 +34,29 @@ export const BRIDGE  = BRIDGE_URL;
 export const NETWORK = BRIDGE_URL === KNOWN_BRIDGES.testnet ? 'testnet'
                      : BRIDGE_URL === KNOWN_BRIDGES.prod    ? 'prod' : 'custom';
 
+// Persistent PUBLISH identity — this app's stable author. Kept separate from the
+// (ephemeral) transport identity per key-separation: the transport key authenticates
+// the connection; the publish key signs posts. Persisting it (localStorage, via
+// dumpIdentity/loadIdentity) means your authorship survives reloads while the
+// transport id stays disposable. Keyed per region so each keyspace has its own author.
+async function loadOrCreatePublishIdentity(center, regionToken) {
+  const key = `axonashare:publish:${regionToken}`;
+  try { const saved = localStorage.getItem(key); if (saved) return await loadIdentity(JSON.parse(saved)); }
+  catch { /* corrupt/denied → mint fresh */ }
+  const id = await deriveIdentity({ lat: center.lat, lng: center.lng });
+  try { localStorage.setItem(key, JSON.stringify(await dumpIdentity(id))); } catch { /* best-effort */ }
+  return id;
+}
+
 export async function connectAxona(onStatus = () => {}) {
   onStatus(`connecting ${BRIDGE_URL} · region ${ANCHOR.name}…`);
-  const identity  = await deriveIdentity({ lat: ANCHOR.center.lat, lng: ANCHOR.center.lng });
+  const identity        = await deriveIdentity({ lat: ANCHOR.center.lat, lng: ANCHOR.center.lng });   // ephemeral transport
+  const publishIdentity = await loadOrCreatePublishIdentity(ANCHOR.center, ANCHOR.token);             // persistent author
   const transport = webTransport({ bridgeUrl: BRIDGE_URL, identity });
   const node      = new NeuronNode({ id: BigInt('0x' + identity.id), lat: ANCHOR.center.lat, lng: ANCHOR.center.lng });
   node.transport  = transport;
   const domain    = new AxonaDomain({ k: 20 });
-  const peer      = new AxonaPeer({ domain, node, identity, transport });
+  const peer      = new AxonaPeer({ domain, node, identity, transport, publishIdentity });   // publishes signed by publishIdentity
 
   await transport.start(identity.id);
   await peer.start();
