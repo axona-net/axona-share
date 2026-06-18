@@ -4,7 +4,7 @@
 // self-contained keyspace — local nodes root local channels and the bridge is
 // only the rendezvous. (Was: both hardcoded us-east, which pinned every peer +
 // topic to one region and locked out anyone elsewhere.)
-import { AxonaPeer, AxonaDomain, NeuronNode, deriveIdentity, dumpIdentity, loadIdentity, KERNEL_VERSION } from '@axona/protocol';
+import { AxonaPeer, AxonaDomain, NeuronNode, createNodeIdentity, createAuthorIdentity, KERNEL_VERSION } from '@axona/protocol';
 import { webTransport } from '@axona/web';
 import { resolveAnchor } from './region.js';
 
@@ -25,8 +25,8 @@ function resolveBridge() {
   return location.hostname.includes('testnet') ? KNOWN_BRIDGES.testnet : KNOWN_BRIDGES.prod;
 }
 const BRIDGE_URL = resolveBridge();
-const ANCHOR    = resolveAnchor();                       // { token, name, center:{lat,lng}, publisher }
-const PUBLISHER = ANCHOR.publisher;
+const ANCHOR    = resolveAnchor();                       // { token, name, code, center:{lat,lng} }
+const REGION_TOKEN = ANCHOR.token;                       // the `region` field of every { region, name } topic
 
 export const REGION = { token: ANCHOR.token, name: ANCHOR.name, code: ANCHOR.code };   // for the UI
 // Which network this session is on (for the header) + the raw bridge URL.
@@ -34,31 +34,22 @@ export const BRIDGE  = BRIDGE_URL;
 export const NETWORK = BRIDGE_URL === KNOWN_BRIDGES.testnet ? 'testnet'
                      : BRIDGE_URL === KNOWN_BRIDGES.prod    ? 'prod' : 'custom';
 
-// Persistent PUBLISH identity — this app's stable author. Kept separate from the
-// (ephemeral) transport identity per key-separation: the transport key authenticates
-// the connection; the publish key signs posts. Persisting it (localStorage, via
-// dumpIdentity/loadIdentity) means your authorship survives reloads while the
-// transport id stays disposable. Keyed per region so each keyspace has its own author.
-async function loadOrCreatePublishIdentity(center, regionToken) {
-  const key = `axonashare:publish:${regionToken}`;
-  try { const saved = localStorage.getItem(key); if (saved) return await loadIdentity(JSON.parse(saved)); }
-  catch { /* corrupt/denied → mint fresh */ }
-  const id = await deriveIdentity({ lat: center.lat, lng: center.lng });
-  try { localStorage.setItem(key, JSON.stringify(await dumpIdentity(id))); } catch { /* best-effort */ }
-  return id;
-}
-
 export async function connectAxona(onStatus = () => {}) {
   onStatus(`connecting ${BRIDGE_URL} · region ${ANCHOR.name}…`);
-  const identity        = await deriveIdentity({ lat: ANCHOR.center.lat, lng: ANCHOR.center.lng });   // ephemeral transport
-  const publishIdentity = await loadOrCreatePublishIdentity(ANCHOR.center, ANCHOR.token);             // persistent author
-  const transport = webTransport({ bridgeUrl: BRIDGE_URL, identity });
-  const node      = new NeuronNode({ id: BigInt('0x' + identity.id), lat: ANCHOR.center.lat, lng: ANCHOR.center.lng });
+  const nodeIdentity = await createNodeIdentity({ lat: ANCHOR.center.lat, lng: ANCHOR.center.lng });   // ephemeral connection
+  // Durable AUTHOR key — this app's stable author. Kept separate from the (ephemeral)
+  // node identity per v0.3 key separation: the node key authenticates the connection;
+  // the author key signs every publish ({ signWith: author }). persistAs load-or-creates
+  // it in localStorage so authorship survives reloads. Keyed per region so each
+  // keyspace has its own stable author.
+  const author       = await createAuthorIdentity({ persistAs: `axonashare:author:${REGION_TOKEN}` });
+  const transport = webTransport({ bridgeUrl: BRIDGE_URL, identity: nodeIdentity });   // transport factory keeps `identity:`
+  const node      = new NeuronNode({ id: BigInt('0x' + nodeIdentity.id), lat: ANCHOR.center.lat, lng: ANCHOR.center.lng });
   node.transport  = transport;
   const domain    = new AxonaDomain({ k: 20 });
-  const peer      = new AxonaPeer({ domain, node, identity, transport, publishIdentity });   // publishes signed by publishIdentity
+  const peer      = new AxonaPeer({ domain, node, nodeIdentity, transport });
 
-  await transport.start(identity.id);
+  await transport.start(nodeIdentity.id);
   await peer.start();
   const readyBy = Date.now() + 30000;
   while (Date.now() < readyBy && (node.synaptome?.size ?? 0) < 3) {
@@ -68,19 +59,23 @@ export async function connectAxona(onStatus = () => {}) {
   await new Promise((r) => setTimeout(r, 1500));                       // settle so roots are reachable
   onStatus('connected');
 
+  // A channel id (e.g. "axona-share/public-images") is the topic NAME; region is the
+  // resolved anchor → a { region, name } descriptor every participant computes alike.
+  const topicOf = (channelId) => ({ region: REGION_TOKEN, name: channelId });
+
   return {
-    nodeId: identity.id,
+    nodeId: nodeIdentity.id,
     // Subscribe to a channel topic; cb gets each parsed message object (chunk).
     async sub(topic, cb) {
-      return peer.sub(topic, (env) => {
+      return peer.sub(topicOf(topic), (env) => {
         if (!env || env.deleted || !env.message) return;
         let m; try { m = JSON.parse(env.message); } catch { return; }
         cb(m);
-      }, { publisher: PUBLISHER, since: 'all' });
+      }, { since: 'all' });
     },
-    async unsub(topic) { try { return await peer.unsub?.(topic); } catch { /* */ } },
-    // Publish one message object (a chunk) to a channel topic.
-    async pub(topic, obj) { return peer.pub(topic, JSON.stringify(obj), { publisher: PUBLISHER }); },
+    async unsub(topic) { try { return await peer.unsub?.(topicOf(topic)); } catch { /* */ } },
+    // Publish one message object (a chunk) to a channel topic, signed by our author.
+    async pub(topic, obj) { return peer.pub(topicOf(topic), JSON.stringify(obj), { signWith: author }); },
     async close() { try { await peer.leave?.(); } catch { /* */ } try { await transport.stop?.(); } catch { /* */ } },
   };
 }
