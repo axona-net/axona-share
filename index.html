@@ -107,17 +107,24 @@
 
   <!-- Bare-specifier resolution: the published kernel is symlinked at
        ./axona-protocol (→ node_modules/@axona/protocol). std/chunk is the
-       reliable file-chunking helper; @axona/web is the browser transport. -->
+       reliable file-chunking helper; @axona/web is the browser transport.
+       The ?v= query is CACHE-BUSTING: GitHub Pages serves these modules with
+       a 10-min max-age, so without a version stamp a browser can keep running
+       a STALE module after a deploy (e.g. an old std/chunk that targeted a
+       larger chunk size, which then trips the kernel's 15 KB publish guard —
+       the "88 KB enveloped message" failure). Bump APP_VERSION on every release
+       so each deploy serves fresh module URLs. std/chunk is self-contained (no
+       sub-imports), so versioning its entry fully refreshes it. -->
   <script type="importmap">
   {
     "imports": {
-      "@axona/protocol": "./axona-protocol/src/index.js",
-      "@axona/protocol/std": "./axona-protocol/std/index.js",
-      "@axona/protocol/std/chunk": "./axona-protocol/std/chunk.js",
-      "@axona/web": "./axona-protocol/src/transport/web/index.js"
+      "@axona/protocol": "./axona-protocol/src/index.js?v=0.12.1",
+      "@axona/protocol/std": "./axona-protocol/std/index.js?v=0.12.1",
+      "@axona/protocol/std/chunk": "./axona-protocol/std/chunk.js?v=0.12.1",
+      "@axona/web": "./axona-protocol/src/transport/web/index.js?v=0.12.1"
     }
   }
   </script>
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./app.js?v=0.12.1"></script>
 </body>
 </html>
