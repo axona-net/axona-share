@@ -1,7 +1,12 @@
 # Axona-share
 
-Share images over [Axona](https://github.com/axona-net/axona-protocol) pub/sub — a
-small, dependency-light reference app for the protocol.
+Share images over [Axona](https://axona.net) pub/sub — a
+small, dependency-light reference app for the
+[protocol](https://github.com/axona-net/axona-protocol).
+
+> Note: a separate, older variant of this app ships inside the kernel demo at
+> `demo.axona.net/apps/axona-share`. **This** repo is the standalone app served
+> from GitHub Pages; if you're debugging, confirm which URL you're on first.
 
 Channels are pub/sub topics. An image is compressed to under 1 MB, split into
 chunks with `@axona/protocol/std/chunk`, published over Axona, and reassembled
