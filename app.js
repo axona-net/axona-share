@@ -3,11 +3,11 @@
 // of chunk-messages (@axona/protocol/std/chunk) and reassembled on every
 // subscriber. Chunk size is the kernel's reliable-publish floor (15 KB) so every
 // chunk fits in a single pub/sub message that all peers/browsers can receive.
-import { connectAxona, KERNEL_VERSION, REGION, NETWORK, BRIDGE } from './axona.js?v=0.13.0';
+import { connectAxona, KERNEL_VERSION, REGION, NETWORK, BRIDGE } from './axona.js?v=0.14.0';
 import { chunkBytes, createReassembler } from '@axona/protocol/std/chunk';
-import { compressImage } from './image.js?v=0.13.0';
+import { compressImage } from './image.js?v=0.14.0';
 
-const APP_VERSION = '0.13.0';
+const APP_VERSION = '0.14.0';
 const DEFAULT_CHANNEL = { id: 'axona-share/public-images', name: 'Public Images' };
 const MAX_IMAGE_BYTES = 1_000_000;
 const $ = (id) => document.getElementById(id);
