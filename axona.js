@@ -6,7 +6,7 @@
 // topic to one region and locked out anyone elsewhere.)
 import { AxonaPeer, AxonaDomain, NeuronNode, createNodeIdentity, createAuthorIdentity, KERNEL_VERSION } from '@axona/protocol';
 import { webTransport } from '@axona/web';
-import { resolveAnchor } from './region.js?v=0.15.0';
+import { resolveAnchor } from './region.js?v=0.16.0';
 
 export { KERNEL_VERSION };          // surfaced in the app header (kernel-version visibility)
 
