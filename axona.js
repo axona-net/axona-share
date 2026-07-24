@@ -6,7 +6,7 @@
 // topic to one region and locked out anyone elsewhere.)
 import { AxonaPeer, AxonaDomain, NeuronNode, createNodeIdentity, createAuthorIdentity, KERNEL_VERSION } from '@axona/protocol';
 import { webTransport } from '@axona/web';
-import { resolveAnchor } from './region.js?v=0.14.0';
+import { resolveAnchor } from './region.js?v=0.15.0';
 
 export { KERNEL_VERSION };          // surfaced in the app header (kernel-version visibility)
 
@@ -51,6 +51,13 @@ export async function connectAxona(onStatus = () => {}) {
 
   await transport.start(nodeIdentity.id);
   await peer.start();
+  // Self-integrate: proactively weave into our keyspace neighbourhood
+  // (findKClosest(self) + open channels so neighbours adopt us). Without it the
+  // peer sits at the passive-adoption churn floor and self-roots its channels as
+  // singletons in a sparse region — fresh subscribers read nothing, and a
+  // long-open tab drifts deaf. connect() does this by default; this app
+  // hand-assembles the lifecycle, so it must call it explicitly. Fire-and-forget.
+  peer.integrate().catch(() => {});
   const readyBy = Date.now() + 30000;
   while (Date.now() < readyBy && (node.synaptome?.size ?? 0) < 3) {
     onStatus(`forming mesh… (${node.synaptome?.size ?? 0})`);
