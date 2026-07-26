@@ -35,6 +35,11 @@ jobs:
           git config --global url."https://github.com/".insteadOf "git+ssh://git@github.com/"
           git config --global url."https://github.com/".insteadOf "git@github.com:"
       - run: npm ci --omit=dev
+      # GATE: the declared pin must equal what npm ci actually installed.
+      # axona-share published kernel 4.38.0 for weeks while package.json read
+      # v4.41.0, because npm ci obeys the lockfile and nothing compared the two.
+      # Fail the deploy here rather than ship a stale kernel to the public web.
+      - run: node check_kernel_pin.mjs
       - name: Assemble site
         run: |
           mkdir -p _site/axona-protocol
