@@ -1,6 +1,7 @@
 {
   "name": "axona-share",
   "version": "0.66.0",
+  "license": "Apache-2.0",
   "description": "Share images over Axona pub/sub — a small reference app for the Axona protocol.",
   "private": true,
   "type": "module",

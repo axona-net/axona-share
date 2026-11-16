@@ -75,3 +75,7 @@ fresh here; the kernel is now consumed as a published npm dependency
 (github-pinned) rather than via relative `../../src` imports. The original
 local `lib/file-transport.js` chunking was migrated onto the protocol's
 `std/chunk` helper as part of the move.
+
+## License
+
+Copyright 2026 Axona.net. Licensed under the Apache License, Version 2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE). Provided "as is", without warranty of any kind.
